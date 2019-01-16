@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Lockout: A script to utilize SNMP to update a device configuration with commands from a file named commands located
+# at /tftpboot.
+
+# ask user for either a hostname or an IP address and SNMP read/write community string register as variables $host and $community
+
+read -p "Please enter a Hostname or IP address and read/write community string: " host community
+
+# ping the host to determine if reachable if reachable continue the script
+
+
+while [ $host ];
+do
+	ping -c3 $host &>/dev/null
+	if [ $? = 0 ]; then
+	echo "Ping Successful" 
+	break
+	else 
+	echo "Host is unreachable"
+	exit 1
+	fi
+done
+
+# Generate random number, add host IP address to SNMPSET statements, and issue.
+
+randomnumber=$(( ( RANDOM % 20 ) +1 )) 
+
+
+snmpset -c $community $host .1.3.6.1.4.1.9.9.96.1.1.1.1.2.$randomnumber integer 1 \
+.1.3.6.1.4.1.9.9.96.1.1.1.1.3.$randomnumber integer 1 \
+.1.3.6.1.4.1.9.9.96.1.1.1.1.4.$randomnumber integer 4 \
+.1.3.6.1.4.1.9.9.96.1.1.1.1.5.$randomnumber ipaddress 10.160.246.20 \
+.1.3.6.1.4.1.9.9.96.1.1.1.1.6.$randomnumber octetstring commands \
+.1.3.6.1.4.1.9.9.96.1.1.1.1.14.$randomnumber integer 4
+
+# Collect read-only snmp-community and test for snmp-set success
+
+read -p "Please enter an snmp read only community string: " read
+
+# Test to ensure that command success
+
+until [ $(snmpwalk -c $read $host 1.3.6.1.4.1.9.9.96.1.1.1.1.10 | cut -d ':' -f 3) = 3 ]; 
+do
+	result=$(snmpwalk -c $read $host 1.3.6.1.4.1.9.9.96.1.1.1.1.10 | cut -d ':' -f 3)
+	if [ $result == 3 ]; then
+		echo "Update Successful!"
+		break
+	elif [ $result == 4 ]; then
+		echo "Update failed!"
+		break
+	else
+		echo "Checking config update..."
+        fi
+
+done
+
+# Clear snmp row
+
+
+snmpset -c $community $host .1.3.6.1.4.1.9.9.96.1.1.1.1.14.$randomnumber integer 6 
+ 
+echo "SNMP row has been deleted"
+
+exit 0
