@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Lockout: A script to utilize SNMP to update a device configuration with commands from a file named commands located
+# SNMP_Command_Push: A script to utilize SNMP to update a device configuration with commands from a file named commands located
 # at /tftpboot.
 
 # ask user for either a hostname or an IP address and SNMP read/write community string register as variables $host and $community
